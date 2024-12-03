@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from skimage import filters
+from skimage.filters import threshold_multiotsu
 
 buckets = 24
 
@@ -35,7 +35,7 @@ def mascaras(lab_img, prob_la, prob_lb, prob_ab, alpha):
     return R_1, R_2, R_3, R_4, R_5
 
 def otsu_segmentos(img):
-    thresh = filters.threshold_multiosu(img)
+    thresh = threshold_multiotsu(img)
     S1 = img < thresh[0]
     S2 = (img >= thresh[0]) & (img < thresh[1])
     S3 = img >= thresh[1]
