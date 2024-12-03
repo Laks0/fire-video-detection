@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from skimage import filters
 
 def mascaras(lab_img):
