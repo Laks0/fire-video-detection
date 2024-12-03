@@ -1,7 +1,10 @@
 import numpy as np
+import pandas as pd
 from skimage import filters
 
-def mascaras(lab_img):
+buckets = 24
+
+def mascaras(lab_img, prob_la, prob_lb, prob_ab, alpha):
     L, a, b = lab_img[:,:,0], lab_img[:,:,1], lab_img[:,:,2]
     L_m = np.mean(L)
     a_m = np.mean(a)
@@ -19,7 +22,17 @@ def mascaras(lab_img):
     # R4(x,y) = 1 si el valor de b* del pixel en esa posición era mayor al valor de a* del pixel en esa posición, 0 si no.
     R_4 = b >= a
 
-    return R_1, R_2, R_3, R_4
+    limitesL = np.arange(100/24, 100, 100/24)
+    limitesab = np.arange(-128, 127, 256/24)
+    
+    indiceL = np.searchsorted(limitesL, L).flatten()
+    indicea = np.searchsorted(limitesab, a).flatten()
+    indiceb = np.searchsorted(limitesab, b).flatten()
+
+    R_5 = prob_la[indiceL, indicea] * prob_lb[indiceL, indiceb] * prob_ab[indicea, indiceb]
+    R_5 = R_5.reshape(R_1.shape) >= alpha
+
+    return R_1, R_2, R_3, R_4, R_5
 
 def otsu_segmentos(img):
     thresh = filters.threshold_multiosu(img)
