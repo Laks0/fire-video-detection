@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from skimage.filters import threshold_multiotsu, threshold_otsu
+from skimage import color
+import cv2
 
 buckets = 24
 
@@ -47,3 +49,28 @@ def otsu_simple(img):
 
 def coincidencia(M1, M2):
     return np.sum(M1 == M2) / (M1.shape[0] * M1.shape[1])
+
+def video_otsu_a(video_path):
+  cap = cv2.VideoCapture(video_path)
+  if not cap.isOpened():
+      print("Error: Could not open video.")
+      exit()
+
+  # Leer el primer frame e inicializar las estructuras
+  ret, frame = cap.read()
+  if not ret:
+      print("Error: Could not read the first frame.")
+      exit()
+
+  M_t = []
+  while True:
+      a = color.rgb2lab(frame[:,:,:3])[:,:,1]
+      _, F = otsu_simple(a)
+      M_t.append(F)
+      
+      # Leer segundo frame
+      ret, frame = cap.read()
+      if not ret:  # Salir si terminó el video
+          break
+
+  return M_t
