@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from skimage.filters import threshold_multiotsu
+from skimage.filters import threshold_multiotsu, threshold_otsu
 
 buckets = 24
 
@@ -40,6 +40,10 @@ def otsu_segmentos(img):
     S2 = (img >= thresh[0]) & (img < thresh[1])
     S3 = img >= thresh[1]
     return S1, S2, S3
+
+def otsu_simple(img):
+    thresh = threshold_otsu(img)
+    return (img < thresh), (img >= thresh)
 
 def coincidencia(M1, M2):
     return np.sum(M1 == M2) / (M1.shape[0] * M1.shape[1])
