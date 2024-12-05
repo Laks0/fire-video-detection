@@ -6,7 +6,7 @@ import cv2
 
 buckets = 24
 
-def mascaras(lab_img, prob_la, prob_lb, prob_ab, alpha):
+def mascaras(lab_img, alpha=0.0016): #, prob_la, prob_lb, prob_ab):
     L, a, b = lab_img[:,:,0], lab_img[:,:,1], lab_img[:,:,2]
     L_m = np.mean(L)
     a_m = np.mean(a)
@@ -31,6 +31,10 @@ def mascaras(lab_img, prob_la, prob_lb, prob_ab, alpha):
     indicea = np.searchsorted(limitesab, a).flatten()
     indiceb = np.searchsorted(limitesab, b).flatten()
 
+    prob_la = np.load("prob_la.npy")
+    prob_lb = np.load("prob_lb.npy")
+    prob_ab = np.load("prob_ab.npy")
+
     R_5 = prob_la[indiceL, indicea] * prob_lb[indiceL, indiceb] * prob_ab[indicea, indiceb]
     R_5 = R_5.reshape(R_1.shape) >= alpha
 
@@ -50,31 +54,8 @@ def otsu_simple(img):
 def coincidencia(M1, M2):
     return np.sum(M1 == M2) / (M1.shape[0] * M1.shape[1])
 
-def video_otsu_a(video_path):
-  cap = cv2.VideoCapture(video_path)
-  if not cap.isOpened():
-      print("Error: Could not open video.")
-      exit()
 
-  # Leer el primer frame e inicializar las estructuras
-  ret, frame = cap.read()
-  if not ret:
-      print("Error: Could not read the first frame.")
-      exit()
-
-  M_t = []
-  while True:
-      a = color.rgb2lab(frame[:,:,:3])[:,:,1]
-      _, F = otsu_simple(a)
-      M_t.append(F)
-      
-      # Leer segundo frame
-      ret, frame = cap.read()
-      if not ret:  # Salir si terminó el video
-          break
-
-  return M_t
-    
+# Genera una lista con los frames del video en formato RGB
 def video_rgb(video_path):
   cap = cv2.VideoCapture(video_path)
   if not cap.isOpened():
@@ -87,14 +68,107 @@ def video_rgb(video_path):
       print("Error: Could not read the first frame.")
       exit()
 
-  M_t = []
+  F_t = []
   while True:
       frame_rgb = cv2.cvtColor(frame[:,:,:3], cv2.COLOR_BGR2RGB)
-      M_t.append(frame_rgb)
+      F_t.append(frame_rgb)
       
       # Leer segundo frame
       ret, frame = cap.read()
       if not ret:  # Salir si terminó el video
           break
 
-  return M_t
+  return F_t
+
+
+######### Funciones que devuelve distintas máscaras generadas sobre los frames del video
+
+# Genera una lista con la segmentación de Otsu sobre la componente a de L*a*b* de la imagen
+def video_otsu_a(video_path):      
+  cap = cv2.VideoCapture(video_path)
+  if not cap.isOpened():
+      print("Error: Could not open video.")
+      exit()
+
+  # Leer el primer frame e inicializar las estructuras
+  ret, frame = cap.read()
+  if not ret:
+      print("Error: Could not read the first frame.")
+      exit()
+
+  F_t = []
+  while True:
+      a = color.rgb2lab(frame[:,:,:3])[:,:,1]
+      _, F = otsu_simple(a)
+      F_t.append(F)
+      
+      # Leer segundo frame
+      ret, frame = cap.read()
+      if not ret:  # Salir si terminó el video
+          break
+
+  return F_t
+
+
+# Devuelve una lista F_t donde cada elemento es una lista: 
+# F_t[0] = R1 & R2 & R3 & R4 & R5   y   F_t[1] = R1 & R2 & R3 & R4
+def video_mascaras_R(video_path):
+  cap = cv2.VideoCapture(video_path)
+  if not cap.isOpened():
+      print("Error: Could not open video.")
+      exit()
+
+  # Leer el primer frame e inicializar las estructuras
+  ret, frame = cap.read()
+  if not ret:
+      print("Error: Could not read the first frame.")
+      exit()
+
+  F_t = []
+  while True:
+      frame_rgb = cv2.cvtColor(frame[:,:,:3], cv2.COLOR_BGR2RGB)
+      frame_lab = color.rgb2lab(frame_rgb)
+      R1, R2, R3, R4, R5 = mascaras(frame_lab)
+	  
+      F_t.append([R1&R2&R3&R4&R5, R1&R2&R3&R4])
+      
+      # Leer segundo frame
+      ret, frame = cap.read()
+      if not ret:  # Salir si terminó el video
+          break
+
+  return F_t
+
+
+# Devuelve una lista con máscaras que se componen de R5 junto con la segmentación de Otsu de la componente a
+def video_otsu_a_R5(video_path):      
+  cap = cv2.VideoCapture(video_path)
+  if not cap.isOpened():
+      print("Error: Could not open video.")
+      exit()
+
+  # Leer el primer frame e inicializar las estructuras
+  ret, frame = cap.read()
+  if not ret:
+      print("Error: Could not read the first frame.")
+      exit()
+
+  F_t = []
+  while True:
+      frame_rgb = cv2.cvtColor(frame[:,:,:3], cv2.COLOR_BGR2RGB)
+      frame_lab = color.rgb2lab(frame_rgb)
+      _, _, _, _, R5 = mascaras(frame_lab)
+
+      a = frame_lab[:,:,1]
+      _, F = otsu_simple(a)
+
+      F_t.append(F&R5)
+      
+      # Leer segundo frame
+      ret, frame = cap.read()
+      if not ret:  # Salir si terminó el video
+          break
+
+  return F_t
+
+
