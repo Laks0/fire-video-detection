@@ -6,7 +6,7 @@ import cv2
 
 buckets = 24
 
-def mascaras(lab_img, alpha=0.0016): #, prob_la, prob_lb, prob_ab):
+def mascaras(lab_img, prob_la, prob_lb, prob_ab, alpha=0.0016):
     L, a, b = lab_img[:,:,0], lab_img[:,:,1], lab_img[:,:,2]
     L_m = np.mean(L)
     a_m = np.mean(a)
@@ -30,10 +30,6 @@ def mascaras(lab_img, alpha=0.0016): #, prob_la, prob_lb, prob_ab):
     indiceL = np.searchsorted(limitesL, L).flatten()
     indicea = np.searchsorted(limitesab, a).flatten()
     indiceb = np.searchsorted(limitesab, b).flatten()
-
-    prob_la = np.load("prob_la.npy")
-    prob_lb = np.load("prob_lb.npy")
-    prob_ab = np.load("prob_ab.npy")
 
     R_5 = prob_la[indiceL, indicea] * prob_lb[indiceL, indiceb] * prob_ab[indicea, indiceb]
     R_5 = R_5.reshape(R_1.shape) >= alpha
@@ -112,7 +108,7 @@ def video_otsu_a(video_path):
 
 # Devuelve una lista F_t donde cada elemento es una lista: 
 # F_t[0] = R1 & R2 & R3 & R4 & R5   y   F_t[1] = R1 & R2 & R3 & R4
-def video_mascaras_R(video_path):
+def video_mascaras_R(video_path, prob_la, prob_lb, prob_ab):
   cap = cv2.VideoCapture(video_path)
   if not cap.isOpened():
       print("Error: Could not open video.")
@@ -128,7 +124,7 @@ def video_mascaras_R(video_path):
   while True:
       frame_rgb = cv2.cvtColor(frame[:,:,:3], cv2.COLOR_BGR2RGB)
       frame_lab = color.rgb2lab(frame_rgb)
-      R1, R2, R3, R4, R5 = mascaras(frame_lab)
+      R1, R2, R3, R4, R5 = mascaras(frame_lab, prob_la, prob_lb, prob_ab)
 	  
       F_t.append([R1&R2&R3&R4&R5, R1&R2&R3&R4])
       
@@ -141,7 +137,7 @@ def video_mascaras_R(video_path):
 
 
 # Devuelve una lista con máscaras que se componen de R5 junto con la segmentación de Otsu de la componente a
-def video_otsu_a_R5(video_path):      
+def video_otsu_a_R5(video_path, prob_la, prob_lb, prob_ab):      
   cap = cv2.VideoCapture(video_path)
   if not cap.isOpened():
       print("Error: Could not open video.")
@@ -157,7 +153,7 @@ def video_otsu_a_R5(video_path):
   while True:
       frame_rgb = cv2.cvtColor(frame[:,:,:3], cv2.COLOR_BGR2RGB)
       frame_lab = color.rgb2lab(frame_rgb)
-      _, _, _, _, R5 = mascaras(frame_lab)
+      _, _, _, _, R5 = mascaras(frame_lab, prob_la, prob_lb, prob_ab)
 
       a = frame_lab[:,:,1]
       _, F = otsu_simple(a)
