@@ -74,3 +74,26 @@ def video_otsu_a(video_path):
           break
 
   return M_t
+    
+def video_rgb(video_path):
+  cap = cv2.VideoCapture(video_path)
+  if not cap.isOpened():
+      print("Error: Could not open video.")
+      exit()
+
+  # Leer el primer frame e inicializar las estructuras
+  ret, frame = cap.read()
+  if not ret:
+      print("Error: Could not read the first frame.")
+      exit()
+
+  M_t = []
+  while True:
+      M_t.append(frame[:,:,:3])
+      
+      # Leer segundo frame
+      ret, frame = cap.read()
+      if not ret:  # Salir si terminó el video
+          break
+
+  return M_t
