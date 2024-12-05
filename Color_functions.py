@@ -89,7 +89,8 @@ def video_rgb(video_path):
 
   M_t = []
   while True:
-      M_t.append(frame[:,:,:3])
+      frame_rgb = cv2.cvtColor(frame[:,:,:3], cv2.COLOR_BGR2RGB)
+      M_t.append(frame_rgb)
       
       # Leer segundo frame
       ret, frame = cap.read()
