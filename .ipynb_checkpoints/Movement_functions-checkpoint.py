@@ -80,7 +80,10 @@ def matriz_de_movimiento(video_path):
 
 # Recibe una imágen segmentada y una máscara y retorna el número del segmento más parecido a la máscara
 def segmento_mas_parecido(segmentos, mascara):
-    return np.argmax(np.bincount(segmentos[mascara]))
+    coincidencias = np.bincount(segmentos[mascara])
+    if coincidencias.shape[0] == 1:
+        return 0
+    return np.argmax(coincidencias[1:]) - 1
 
 def frames_en_crecimiento(seg, t, areas_t, segmentos_t, tiempo_buffer, coincidencia_minima, segmento_similar):
     id_segmento = seg
@@ -91,6 +94,7 @@ def frames_en_crecimiento(seg, t, areas_t, segmentos_t, tiempo_buffer, coinciden
 
         # El segmento ya no existe más
         if nueva_id == 0 or coincidencia(segmentos_t[t-dt] == nueva_id, mascara) < coincidencia_minima:
+            frames_en_crecimiento += 1
             break
 
         if areas_t[t-dt][nueva_id] < areas_t[t-dt+1][id_segmento]:
