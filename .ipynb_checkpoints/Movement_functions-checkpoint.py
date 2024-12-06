@@ -80,20 +80,19 @@ def matriz_de_movimiento(video_path):
 
 # Recibe una imágen segmentada y una máscara y retorna el número del segmento más parecido a la máscara
 def segmento_mas_parecido(segmentos, mascara):
-    puntajes = np.array([coincidencia(segmentos==i, mascara) for i in range(np.max(segmentos))])
-    return np.argmax(puntajes)
+    return np.argmax(np.bincount(segmentos[mascara]))
 
-def frames_en_crecimiento(seg, t, areas_t, segmentos_t, tiempo_buffer, coincidencia_minima):
+def frames_en_crecimiento(seg, t, areas_t, segmentos_t, tiempo_buffer, coincidencia_minima, segmento_similar):
     id_segmento = seg
     frames_en_crecimiento = 0
     for dt in range(1, tiempo_buffer+1):
         mascara = segmentos_t[t-dt+1] == id_segmento
-        nueva_id = segmento_mas_parecido(segmentos_t[t-dt], mascara)
+        nueva_id = segmento_similar[t-dt+1][id_segmento]
 
         # El segmento ya no existe más
-        if coincidencia(segmentos_t[t-dt] == nueva_id, mascara) < coincidencia_minima:
+        if nueva_id == 0 or coincidencia(segmentos_t[t-dt] == nueva_id, mascara) < coincidencia_minima:
             break
-        
+
         if areas_t[t-dt][nueva_id] < areas_t[t-dt+1][id_segmento]:
             frames_en_crecimiento += 1
         id_segmento = nueva_id
@@ -107,20 +106,32 @@ def componentes_que_crecen(img_t, tiempo_buffer=10, min_crecimiento=.4, min_area
     res_t = np.full((img_shape[0]-tiempo_buffer, img_shape[1], img_shape[2]), False)
 
     segmentos_t = np.array([measure.label(x) for x in img_t])
-    areas_t = [np.array([np.count_nonzero(segmentos == seg) for seg in range(np.max(segmentos))]) for segmentos in segmentos_t]
+    areas_t = [np.array([np.count_nonzero(segmentos == seg) for seg in range(np.max(segmentos)+1)]) for segmentos in segmentos_t]
+
+    # segmento_similar[t][seg] es el segmento equivalente a seg de tiempo t en el tiempo t-1
+    segmento_similar = [
+        np.array([
+            segmento_mas_parecido(segmentos_t[t-1], segmentos_t[t] == seg) for seg in range(np.max(segmentos_t[t])+1)
+        ]) 
+        for t in range(1, len(segmentos_t))]
+    segmento_similar.insert(0, [0])
+    print("Preprocesados", len(segmento_similar), "frames")
 
     for t, segmentos in enumerate(segmentos_t):
         if t < tiempo_buffer:
             continue
+        if t % 10 == 0:
+            print("Procesado frame", t)
         for seg, area in enumerate(areas_t[t]):
             if seg == 0:
                 continue
             if (area < min_area):
                 continue
                 
-            crecimiento = frames_en_crecimiento(seg, t, areas_t, segmentos_t, tiempo_buffer, coincidencia_minima)
+            crecimiento = frames_en_crecimiento(seg, t, areas_t, segmentos_t, tiempo_buffer, coincidencia_minima, segmento_similar)
             
             if crecimiento/tiempo_buffer > min_crecimiento:
                 res_t[t-tiempo_buffer] = res_t[t-tiempo_buffer] | (segmentos == seg)
 
+    print("Listo :)")
     return res_t
